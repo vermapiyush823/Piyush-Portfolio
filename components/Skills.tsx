@@ -82,6 +82,74 @@ function Orbit({ active, paused }: { active: string | null; paused: boolean }) {
   );
 }
 
+// Compact orbit for small screens: categories orbit instead of every skill.
+const MOBILE_RINGS: { groups: string[]; radius: number; duration: number; reverse?: boolean }[] = [
+  { groups: ["lang", "core", "backend"], radius: 0.25, duration: 50 },
+  { groups: ["ai", "frontend", "data", "servicenow"], radius: 0.43, duration: 70, reverse: true },
+];
+
+function MobileOrbit({ active, onSelect }: { active: string | null; onSelect: (id: string | null) => void }) {
+  return (
+    <div className={`relative mx-auto aspect-square w-full max-w-[380px] ${active ? "orbit-paused" : ""}`}>
+      <button
+        onClick={() => onSelect(null)}
+        aria-label="Show all skills"
+        className="absolute left-1/2 top-1/2 z-10 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-mint/40 bg-ink-2 shadow-[0_0_60px_-10px_rgba(124,255,178,0.5)]"
+      >
+        <span className="font-mono text-[10px] text-mint">{"</PV>"}</span>
+      </button>
+
+      {MOBILE_RINGS.map((ring, ri) => {
+        const anim = `orbit ${ring.duration}s linear infinite${ring.reverse ? " reverse" : ""}`;
+        const counter = `orbit ${ring.duration}s linear infinite${ring.reverse ? "" : " reverse"}`;
+        return (
+          <motion.div
+            key={ri}
+            className="absolute left-1/2 top-1/2 rounded-full border border-dashed border-line"
+            style={{
+              width: `${ring.radius * 200}%`,
+              height: `${ring.radius * 200}%`,
+              marginLeft: `${-ring.radius * 100}%`,
+              marginTop: `${-ring.radius * 100}%`,
+            }}
+            initial={{ opacity: 0, scale: 0.6 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.2, delay: ri * 0.12, ease }}
+          >
+            <div className="absolute inset-0" style={{ animation: anim }}>
+              {ring.groups.map((id, i) => {
+                const g = skillGroups.find((s) => s.id === id)!;
+                const angle = (i / ring.groups.length) * Math.PI * 2 - Math.PI / 2;
+                const on = !active || active === id;
+                return (
+                  <div key={id} className="absolute" style={{ left: `${50 + Math.cos(angle) * 50}%`, top: `${50 + Math.sin(angle) * 50}%` }}>
+                    <div style={{ animation: counter }}>
+                      <button
+                        onClick={() => onSelect(active === id ? null : id)}
+                        aria-pressed={active === id}
+                        className="block whitespace-nowrap rounded-full border bg-ink px-3 py-1.5 font-mono text-[11px] transition-all duration-500"
+                        style={{
+                          borderColor: on ? `${GROUP_COLOR[id]}66` : "rgb(255 255 255 / 0.06)",
+                          color: on ? GROUP_COLOR[id] : "rgb(139 144 160 / 0.35)",
+                          boxShadow: active === id ? `0 0 24px -4px ${GROUP_COLOR[id]}88` : "none",
+                          transform: `translate(-50%, -50%) scale(${active === id ? 1.12 : 1})`,
+                        }}
+                      >
+                        {g.label}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Skills() {
   const [active, setActive] = useState<string | null>(null);
   const [hovering, setHovering] = useState(false);
@@ -104,10 +172,14 @@ export default function Skills() {
           <div>
             <Reveal>
               <p className="mb-6 text-fog">
-                Hover a category to light up its orbit. Inner rings are fundamentals; the outer rings are where I build products.
+                <span className="lg:hidden">Tap a category to see its skills.</span>
+                <span className="hidden lg:inline">Hover a category to light up its orbit.</span> Inner rings are fundamentals; the outer rings are where I build products.
               </p>
             </Reveal>
-            <ul className="flex flex-wrap gap-2 lg:flex-col lg:gap-1">
+            <Reveal className="lg:hidden">
+              <MobileOrbit active={active} onSelect={setActive} />
+            </Reveal>
+            <ul className="hidden lg:flex lg:flex-col lg:gap-1">
               {skillGroups.map((g, i) => (
                 <Reveal key={g.id} delay={i * 0.05} y={10}>
                   <button
